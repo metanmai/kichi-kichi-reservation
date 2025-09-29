@@ -25,4 +25,4 @@ jobs:
           playwright install --with-deps chromium
 
       - name: Run Kichikichi checker
-        run: python kichikichi_check.py
+        run: python -u kichikichi_check.py
