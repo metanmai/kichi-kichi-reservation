@@ -13,13 +13,11 @@ TEXT_CLOSED = "We are currently fully booked. Reservations cannot be made at thi
 NTFY_TOPIC = "kichikichi-alert"
 NTFY_URL = f"https://ntfy.sh/{NTFY_TOPIC}"
 INTERVAL = 10  # seconds between checks
-HTML_DUMP_DIR = "html_snapshots"  # folder to save HTML snapshots
+HTML_DUMP_DIR = "html_snapshots"
 
-# Toggle test mode (simulated states)
 TEST_MODE = False
 TEST_STATE = "open"
 
-# Ensure the snapshot directory exists
 os.makedirs(HTML_DUMP_DIR, exist_ok=True)
 
 
@@ -27,14 +25,12 @@ os.makedirs(HTML_DUMP_DIR, exist_ok=True)
 # Core logic
 # ===============================
 def get_state(page):
-    """Return one of: before | closed | open"""
+    """Return state and HTML content"""
     if TEST_MODE:
-        return TEST_STATE
+        return TEST_STATE, "<html>Test HTML</html>"
 
     page.goto(URL)
-    # Wait a few seconds for JS to render
-    page.wait_for_timeout(3000)  # 3 seconds
-
+    page.wait_for_timeout(3000)
     html = page.content()
 
     if TEXT_BEFORE in html:
@@ -46,12 +42,11 @@ def get_state(page):
 
 
 def notify(state):
-    if state == "open":
-        msg = "🚨 KichiKichi reservations are OPEN! Go now: " + URL
-    elif state == "closed":
-        msg = "⚠️ KichiKichi reservations are CLOSED."
-    else:
-        msg = f"ℹ️ State changed: {state}"
+    msg_map = {
+        "open": f"🚨 KichiKichi reservations are OPEN! Go now: {URL}",
+        "closed": f"⚠️ KichiKichi reservations are CLOSED."
+    }
+    msg = msg_map.get(state, f"ℹ️ State changed: {state}")
 
     try:
         requests.post(NTFY_URL, data=msg.encode("utf-8"))
@@ -69,31 +64,33 @@ def save_html_snapshot(state, html):
 
 
 def main():
-    last_state = None
+    last_state: str | None = None
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        while True:
-            try:
-                state, html = get_state(page)
-                if state != last_state:
-                    print(f"State changed: {state}")
-                    notify(state)
-                    save_html_snapshot(state, html)
 
-                    # Stop if final state
-                    if state in ("open", "closed"):
-                        break
+        print("Checker started, monitoring every", INTERVAL, "seconds...")
+        try:
+            while True:
+                try:
+                    state, html = get_state(page)
+                    if state != last_state:
+                        print(f"[{datetime.now()}] State changed: {state}")
+                        notify(state)
+                        save_html_snapshot(state, html)
+                        last_state = state
+                    else:
+                        print(f"[{datetime.now()}] Still in state: {state}")
 
-                    last_state = state
-                else:
-                    print(f"Still in state: {state}")
-            except Exception as e:
-                print("Error:", e)
+                except Exception as e:
+                    print(f"[{datetime.now()}] Error:", e)
 
-            time.sleep(INTERVAL)
+                time.sleep(INTERVAL)
 
-        browser.close()
+        finally:
+            browser.close()
+            print("Browser closed gracefully.")
 
 
 if __name__ == "__main__":
