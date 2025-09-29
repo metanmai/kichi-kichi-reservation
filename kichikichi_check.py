@@ -20,7 +20,6 @@ TEST_STATE = "open"
 
 os.makedirs(HTML_DUMP_DIR, exist_ok=True)
 
-
 # ===============================
 # Core logic
 # ===============================
@@ -41,16 +40,25 @@ def get_state(page):
         return "open", html
 
 
-def notify(state):
-    msg_map = {
-        "open": f"🚨 KichiKichi reservations are OPEN! Go now: {URL}",
-        "closed": "⚠️ KichiKichi reservations are CLOSED.",
-        "before": "ℹ️ Reservations have not yet opened."
-    }
-    msg = msg_map.get(state, f"ℹ️ State changed: {state}")
+def notify(state, msg=None, startup=False):
+    """Send notification via ntfy with priority"""
+    if startup:
+        msg = "ℹ️ KichiKichi checker started."
+        priority = 3  # medium priority for startup
+    else:
+        msg_map = {
+            "open": f"🚨 KichiKichi reservations are OPEN! Go now: {URL}",
+            "closed": "⚠️ KichiKichi reservations are CLOSED.",
+            "before": "ℹ️ Reservations have not yet opened."
+        }
+        msg = msg or msg_map.get(state, f"ℹ️ State changed: {state}")
+        # High priority only for "open"
+        priority = 5 if state == "open" else 1
 
-    # High priority for "open", low for everything else
-    priority = 5 if state == "open" else 1
+        # Only send notification for "open" or "closed" (optional: also on startup)
+        if state not in ("open", "closed"):
+            print(f"[{datetime.now()}] Skipping notification for state: {state}")
+            return
 
     headers = {"Priority": str(priority)}
 
@@ -76,20 +84,20 @@ def main():
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
 
+        # Notify startup
+        notify(None, startup=True)
+
         print("Checker started, monitoring every", INTERVAL, "seconds...")
         try:
             while True:
                 try:
                     state, html = get_state(page)
+
+                    # Only notify on state change
                     if state != last_state:
                         print(f"State changed: {state}")
                         notify(state)
                         save_html_snapshot(state, html)
-
-                        # Stop once final state reached
-                        if state in ("open", "closed"):
-                            break
-
                         last_state = state
                     else:
                         print(f"[{datetime.now()}] Still in state: {state}")

@@ -1,14 +1,12 @@
 name: Kichikichi Check
 
 on:
-  workflow_dispatch:  # allows manual trigger
-  schedule:
-    # Runs every minute
-    - cron: "* * * * *"
+  workflow_dispatch:  # allows manual trigger only
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
+    timeout-minutes: 1440   # kill job after 24h (to avoid runaway costs)
 
     steps:
       - name: Checkout repository
