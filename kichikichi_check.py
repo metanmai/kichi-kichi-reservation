@@ -9,7 +9,7 @@ import os
 # ===============================
 URL = "https://kichikichi.com/kichikichi-reservation/"
 TEXT_BEFORE = "When the reservation time arrives, the reservation page will open."
-TEXT_CLOSED = "We are currently fully booked. Reservations cannot be made at this time." 
+TEXT_CLOSED = "We are currently fully booked. Reservations cannot be made at this time."
 NTFY_TOPIC = "kichikichi-alert"
 NTFY_URL = f"https://ntfy.sh/{NTFY_TOPIC}"
 INTERVAL = 10  # seconds between checks
@@ -44,13 +44,19 @@ def get_state(page):
 def notify(state):
     msg_map = {
         "open": f"🚨 KichiKichi reservations are OPEN! Go now: {URL}",
-        "closed": f"⚠️ KichiKichi reservations are CLOSED."
+        "closed": "⚠️ KichiKichi reservations are CLOSED.",
+        "before": "ℹ️ Reservations have not yet opened."
     }
     msg = msg_map.get(state, f"ℹ️ State changed: {state}")
 
+    # High priority for "open", low for everything else
+    priority = 5 if state == "open" else 1
+
+    headers = {"Priority": str(priority)}
+
     try:
-        requests.post(NTFY_URL, data=msg.encode("utf-8"))
-        print("Notification sent:", msg)
+        requests.post(NTFY_URL, data=msg.encode("utf-8"), headers=headers)
+        print(f"Notification sent (priority {priority}):", msg)
     except Exception as e:
         print("Notification failed:", e)
 
@@ -76,9 +82,14 @@ def main():
                 try:
                     state, html = get_state(page)
                     if state != last_state:
-                        print(f"[{datetime.now()}] State changed: {state}")
+                        print(f"State changed: {state}")
                         notify(state)
                         save_html_snapshot(state, html)
+
+                        # Stop once final state reached
+                        if state in ("open", "closed"):
+                            break
+
                         last_state = state
                     else:
                         print(f"[{datetime.now()}] Still in state: {state}")
