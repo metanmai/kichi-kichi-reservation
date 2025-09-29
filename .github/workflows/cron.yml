@@ -1,21 +1,28 @@
-name: Cron Job
+name: Kichikichi Check
 
 on:
+  workflow_dispatch:  # allows manual trigger
   schedule:
-    - cron: "0 * * * *" # runs every hour
-  workflow_dispatch:     # lets you run manually from the GitHub UI
+    # Runs every minute
+    - cron: "* * * * *"
 
 jobs:
-  run-cron:
+  run-script:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          go-version: '1.22'
+          python-version: "3.x"
 
-      - name: Run cron script
-        run: go run main.go
+      - name: Install dependencies
+        run: |
+          pip install requests playwright
+          playwright install --with-deps chromium
+
+      - name: Run Kichikichi checker
+        run: python kichikichi_check.py
