@@ -19,8 +19,26 @@ jobs:
 
       - name: Install dependencies
         run: |
+          # Installs core dependencies
           pip install requests playwright
+          # Installs the necessary browser executable (Chromium)
           playwright install --with-deps chromium
 
       - name: Run Kichikichi checker
-        run: python -u kichikichi_check.py
+        # The -u flag ensures output is unbuffered, helpful in CI environments
+        run: python -u kichikichi_check.py 
+        # Note: If your Python file is named auto_booker.py, change 'kichikichi_check.py' above.
+
+      - name: Upload Reservation Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          # Naming the artifact package with the unique run ID makes it easy to find
+          name: reservation-run-results-${{ github.run_id }}
+          # Path lists all the directories and files to upload
+          path: |
+            html_snapshots/
+            success_screenshots/
+            ERROR_*.png # Catches any error screenshots from the root
+            FAILED_*.png # Catches any failed submission screenshots from the root
+          # Optional: Sets a retention limit to automatically clean up storage
+          retention-days: 7 

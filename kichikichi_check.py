@@ -14,8 +14,9 @@ TEXT_BEFORE = "When the reservation time arrives, the reservation page will open
 TEXT_CLOSED = "We are currently fully booked. Reservations cannot be made at this time."
 NTFY_TOPIC = "kichikichi-alert"
 NTFY_URL = f"https://ntfy.sh/{NTFY_TOPIC}"
-INTERVAL = 10  # seconds between checks
+INTERVAL = 1  # seconds between checks
 HTML_DUMP_DIR = "html_snapshots"
+SUCCESS_SCREENSHOTS_DIR = "success_screenshots" # New directory for successful bookings
 
 # Reservation config - Each person gets ONE slot, both Bar and Table
 USERS = [
@@ -41,11 +42,13 @@ SLOT_MAPPING = {
 SEATINGS = ["Bar", "Table"]
 
 # Test mode
-TEST_MODE = True
+TEST_MODE = False
 TEST_HTML_FILE = "KichiKichi Reservation - ザ・洋食屋・キチキチ.html"
 TEST_STATE = "open"
 
+# Create required directories
 os.makedirs(HTML_DUMP_DIR, exist_ok=True)
+os.makedirs(SUCCESS_SCREENSHOTS_DIR, exist_ok=True)
 
 # ===============================
 # Helpers
@@ -60,13 +63,11 @@ def get_state(page):
             with open(TEST_HTML_FILE, encoding="utf-8") as f:
                 html = f.read()
         except FileNotFoundError:
-            # If test file doesn't exist, we can't test properly
             print(f"ERROR: Test HTML file '{TEST_HTML_FILE}' not found. Defaulting to 'before' state.")
             html = ""
         return TEST_STATE, html
 
     page.goto(URL, wait_until="load")
-    # Wait for content to load, 2 seconds maximum
     page.wait_for_timeout(2000)
     html = page.content()
 
@@ -92,13 +93,11 @@ def notify(state, msg=None, startup=False):
         msg = msg or msg_map.get(state, f"State changed: {state}")
         priority = 5 if state == "open" else 1
         
-        # Only notify for 'open' state once the state has been confirmed
         if state not in ("open", "closed", "before"):
             print(f"[{datetime.now()}] Skipping notify for state {state}")
             return
 
     try:
-        # Note: NTFY_URL is accessed globally
         requests.post(NTFY_URL, data=msg.encode("utf-8"), headers={"Priority": str(priority)})
         print(f"Notification sent (priority {priority}): {msg}")
     except Exception as e:
@@ -108,7 +107,6 @@ def notify(state, msg=None, startup=False):
 def save_html_snapshot(state, html):
     """Save the HTML content to a file."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    # HTML_DUMP_DIR is accessed globally
     filename = os.path.join(HTML_DUMP_DIR, f"{state}_{timestamp}.html")
     with open(filename, "w", encoding="utf-8") as f:
         f.write(html)
@@ -121,14 +119,13 @@ def worker_book_slot(user, seating, reservation_num, total_reservations):
     Launches its own Playwright session.
     """
     slot = user["slot"]
-    slot_id = SLOT_MAPPING.get(slot) # SLOT_MAPPING is accessed globally
+    slot_id = SLOT_MAPPING.get(slot)
     
     if not slot_id:
         print(f"Worker Error: No mapping for slot {slot}, skipping reservation for {user['name']}.")
         return
     
     # --- Playwright Setup (Local to this Thread) ---
-    # This ensures thread safety, as each thread gets its own browser instance.
     with sync_playwright() as p:
         try:
             # Launch browser in headless mode unless in TEST_MODE
@@ -147,6 +144,8 @@ def worker_book_slot(user, seating, reservation_num, total_reservations):
                 page.goto(URL, wait_until="networkidle")
             page.wait_for_timeout(500)
 
+            # Select language and fill form... (Form filling code remains the same)
+            
             # Select language
             print("Selecting language: English")
             page.select_option("#language-select", "en")
@@ -170,7 +169,7 @@ def worker_book_slot(user, seating, reservation_num, total_reservations):
             page.fill("#confirm_email", user["email"])
             page.wait_for_timeout(100)
             
-            print(f"Filling number of people: {RES_PEOPLE}") # RES_PEOPLE is accessed globally
+            print(f"Filling number of people: {RES_PEOPLE}")
             page.fill("#number_of_people", RES_PEOPLE)
             page.wait_for_timeout(200)
 
@@ -189,50 +188,79 @@ def worker_book_slot(user, seating, reservation_num, total_reservations):
             page.check("#confirm-agree")
             page.wait_for_timeout(200)
 
+            # Define base filename for screenshot
+            safe_slot = slot.replace(":", "")
+            safe_name = user["name"].replace(" ", "_")
+            
             if TEST_MODE:
-                print("\n[TEST_MODE] Form filled. Pausing 1 second...")
-                page.wait_for_timeout(1000)
-                print("Skipping submission (TEST_MODE)\n")
+                # ==========================================================
+                # Simulation of Success Case for TEST_MODE = True
+                # ==========================================================
+                print("\n[TEST_MODE] Simulating successful form submission...")
+                page.wait_for_timeout(2000) # Simulate network lag
+
+                # Screenshot the fully filled form into the success folder
+                base_filename = f"SIMULATED_SUCCESS_{safe_name}_{safe_slot}_{seating}.png"
+                filename = os.path.join(SUCCESS_SCREENSHOTS_DIR, base_filename)
+                page.screenshot(path=filename) 
+
+                # Detailed Success Message
+                success_msg = (
+                    f"SUCCESS (TEST MODE): {user['name']} - Slot {slot}, {seating} "
+                    f"for {RES_PEOPLE} people. Confirmation email address: {user['email']}. "
+                    f"(Screenshot saved to: {filename})"
+                )
+                print(f"\n{success_msg}")
+                notify("open", msg=success_msg)
+                
             else:
-                # Submit automatically
+                # ==========================================================
+                # Actual Submission Logic for TEST_MODE = False
+                # ==========================================================
                 print("Submitting form...")
-                # Note: Changed to use page.wait_for_selector for success indicator
-                # to handle potential issues with wait_for_load_state('networkidle')
-                # in a high-load scenario.
                 page.click("#submit-button")
                 
-                # Wait for the confirmation page to load or a timeout to occur (e.g., if page is fully booked)
                 try:
-                    # Wait for up to 10 seconds for the URL to change, indicating submission
                     page.wait_for_url("**/confirmation", timeout=10000) 
                     success = True
                 except TimeoutError:
-                    # Check the content if URL didn't change (might be a soft error on the same page)
                     page_content = page.content()
                     if "fully booked" in page_content.lower() or "cannot be made" in page_content.lower():
                         success = False
                     else:
-                        success = None # Unknown state
+                        success = None
                 
-                # Check result
                 page_content = page.content()
                 
-                # Screenshot
-                safe_slot = slot.replace(":", "")
-                safe_name = user["name"].replace(" ", "_")
-                filename = f"result_{safe_name}_{safe_slot}_{seating}.png"
-                page.screenshot(path=filename)
-                
                 if success is True:
-                    success_msg = f"SUCCESS: {user['name']} - {slot} {seating} seat booked! (Screenshot: {filename})"
+                    # Successful submission screenshot -> success folder
+                    base_filename = f"SUCCESS_{safe_name}_{safe_slot}_{seating}.png"
+                    filename = os.path.join(SUCCESS_SCREENSHOTS_DIR, base_filename)
+                    page.screenshot(path=filename)
+                    
+                    # Detailed Success Message for Live Run
+                    success_msg = (
+                        f"SUCCESS: {user['name']} - Slot {slot}, {seating} "
+                        f"for {RES_PEOPLE} people. Confirmation email address: {user['email']}. "
+                        f"(Screenshot saved to: {filename})"
+                    )
                     print(f"\n{success_msg}")
                     notify("open", msg=success_msg)
                 elif success is False:
+                    # Failure screenshot -> root (or could be placed in a failure folder)
+                    base_filename = f"FAILED_{safe_name}_{safe_slot}_{seating}.png"
+                    filename = base_filename # Kept in root for now
+                    page.screenshot(path=filename)
+                    
                     fail_msg = f"FAILED: {user['name']} - {slot} {seating} fully booked (Screenshot: {filename})"
                     print(f"\n{fail_msg}")
-                    notify("closed", msg=fail_msg) # Use 'closed' priority 1 for failure message
+                    notify("closed", msg=fail_msg)
                 else:
-                    # Unknown result - still notify
+                    # Unknown result screenshot -> success folder (for checking)
+                    base_filename = f"UNKNOWN_{safe_name}_{safe_slot}_{seating}.png"
+                    filename = os.path.join(SUCCESS_SCREENSHOTS_DIR, base_filename) # Put unknown in success folder for review
+                    page.screenshot(path=filename)
+                    
                     unknown_msg = f"UNKNOWN: {user['name']} - {slot} {seating} (check screenshot: {filename})"
                     print(f"\n{unknown_msg}")
                     notify("open", msg=unknown_msg)
@@ -241,13 +269,13 @@ def worker_book_slot(user, seating, reservation_num, total_reservations):
             error_msg = f"Worker ERROR for {user['name']} - {slot} {seating}: {type(e).__name__} - {e}"
             print(f"\n{error_msg}\n")
             notify("open", msg=error_msg)
-            # Try to screenshot the error page if possible
             try:
+                # Error screenshots stay in the root for easy retrieval
                 safe_slot = slot.replace(":", "")
                 safe_name = user["name"].replace(" ", "_")
-                page.screenshot(path=f"error_{safe_name}_{safe_slot}_{seating}.png")
+                page.screenshot(path=f"ERROR_{safe_name}_{safe_slot}_{seating}.png")
             except:
-                pass # Ignore if screenshot fails
+                pass
 
 
 def auto_book():
@@ -267,7 +295,6 @@ def auto_book():
         for seating in SEATINGS:
             reservation_num += 1
             
-            # Create a thread for each booking attempt
             thread = threading.Thread(
                 target=worker_book_slot,
                 args=(user, seating, reservation_num, total_reservations),
@@ -289,7 +316,6 @@ def auto_book():
 def main():
     last_state = None
     
-    # We only need one Playwright instance here for the initial state check
     with sync_playwright() as p:
         # Launch browser to check initial state (can be headless)
         browser = p.chromium.launch(headless=True)
@@ -300,19 +326,16 @@ def main():
         print("Checker started...")
         try:
             while True:
-                # Use the main thread's browser instance for checking the state
                 state, html = get_state(page)
 
                 if state != last_state:
                     print(f"State changed: {state}")
                     save_html_snapshot(state, html)
-                    # Notify about the state change before attempting to book
                     notify(state)
 
                     if state == "open":
-                        # Close the checker browser, as auto_book will launch many new ones
+                        # Close the checker browser before starting the parallel workers
                         browser.close() 
-                        # Execute the parallel booking
                         auto_book()
                         break
 
@@ -323,7 +346,6 @@ def main():
                 time.sleep(INTERVAL)
 
         finally:
-            # Ensure the main browser is closed if the loop breaks or errors
             if browser and not browser.is_closed():
                 browser.close()
 
@@ -331,5 +353,5 @@ def main():
 if __name__ == "__main__":
     print("Starting KichiKichi checker + auto-booker...")
     if TEST_MODE:
-        print(f"Running in TEST_MODE, using {TEST_HTML_FILE}. Reservations will be simulated.")
+        print(f"Running in TEST_MODE, using {TEST_HTML_FILE}. Success will be SIMULATED for every attempt.")
     main()
