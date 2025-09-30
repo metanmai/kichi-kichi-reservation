@@ -47,7 +47,7 @@ TEST_MODE = os.getenv("TEST_MODE", "false").lower() == "true"
 
 print(f"TEST_MODE: {TEST_MODE}")
 
-TEST_HTML_FILE = "KichiKichi Reservation - ザ・洋食屋・キチキチ.html"
+TEST_HTML_FILE = "KichiKichi Reservation.html"
 TEST_STATE = "open"
 
 os.makedirs(HTML_DUMP_DIR, exist_ok=True)
