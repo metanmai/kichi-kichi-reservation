@@ -96,9 +96,23 @@ def sync_artifacts():
     run_shell_command("git stash pop --index || true")
 
     # 4. Add the artifact directories (HTML snapshots and SUCCESS screenshots)
-    if not (run_shell_command(f"git add {HTML_DUMP_DIR}") and run_shell_command(f"git add {SUCCESS_SCREENSHOTS_DIR}")):
+    # --- FIX STARTS HERE ---
+    # Build a list of paths that actually exist to avoid git errors
+    paths_to_add = []
+    if os.path.exists(HTML_DUMP_DIR):
+        paths_to_add.append(HTML_DUMP_DIR)
+    if os.path.exists(SUCCESS_SCREENSHOTS_DIR):
+        paths_to_add.append(SUCCESS_SCREENSHOTS_DIR)
+
+    if not paths_to_add:
+        print("No artifact directories exist yet. Skipping git add.")
+    # Join existing paths into a single command, e.g., "git add html_snapshots success_screenshots"
+    elif not run_shell_command(f"git add {' '.join(paths_to_add)}"):
         print("ERROR: Failed to git add snapshots.")
+        # Revert to main branch before returning on failure
+        run_shell_command("git checkout main")
         return
+    # --- FIX ENDS HERE ---
 
     # 5. Commit if there are changes
     if run_shell_command("git diff --cached --exit-code --quiet"):
