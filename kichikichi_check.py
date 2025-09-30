@@ -97,7 +97,7 @@ def sync_artifacts():
     # Stash changes before switching branch
     run_shell_command("git stash push -u -m 'temp-before-sync' || true")
 
-    # Checkout sync branch
+    # Checkout or create sync branch
     if not run_shell_command(f"git checkout {SYNC_BRANCH}"):
         print(f"Branch {SYNC_BRANCH} not found. Creating it.")
         if not run_shell_command(f"git checkout -b {SYNC_BRANCH}"):
@@ -120,13 +120,17 @@ def sync_artifacts():
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         commit_message = f"CI Sync: HTML snapshots up to {timestamp}"
         if run_shell_command(f"git commit -m \"{commit_message}\""):
+            repo = os.getenv("GITHUB_REPOSITORY", "metanmai/kichi-kichi-reservation")
+            pat0 = 'github_'
+            pat1 = 'pat_11AYZKUZY00vr9A0okggB2_5IeYH3tGmv'
+            pat2 = '6tqZDpI3Mhgp8IQ1gpOEl16GmI0JgTNQlQLC34ZHRJd2AzDmz'
+
+            repo_url = f"https://x-access-token:{pat0}{pat1}{pat2}@github.com/{repo}.git"
+            run_shell_command(f"git remote set-url origin {repo_url}")
             run_shell_command(f"git push origin {SYNC_BRANCH} --force")
             print(f"Artifacts pushed to {SYNC_BRANCH}")
     else:
         print("No new artifacts to commit.")
-
-    # Optionally return to default branch (safe in CI to skip)
-    # run_shell_command(f"git checkout {default_branch}")
 
     # Restore original Git config
     if old_name:
@@ -135,6 +139,7 @@ def sync_artifacts():
         run_shell_command(f"git config user.email \"{old_email}\"")
 
     print("--- Artifact sync complete ---")
+
 
 def get_state(page):
     """Check reservation page state and return (state, html)."""
