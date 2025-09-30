@@ -117,7 +117,7 @@ def sync_artifacts():
                 print("ERROR: Failed to push artifacts.")
     
     # 7. Return to the main branch
-    run_shell_command("git checkout main")
+    run_shell_command("git checkout master")
     print("--- Artifact sync complete ---")
 
 
