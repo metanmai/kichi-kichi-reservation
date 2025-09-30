@@ -209,7 +209,7 @@ def worker_book_slot(user, seating, reservation_num, total_reservations):
 
     with sync_playwright() as p:
         try:
-            browser = p.chromium.launch(headless=False)
+            browser = p.chromium.launch(headless=True)
             page = browser.new_page()
 
             print(f"[{reservation_num}/{total_reservations}] Booking: {user['name']} | {slot} | {seating}")
@@ -306,7 +306,7 @@ def main():
     check_count = 0
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
+        browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         notify(None, startup=True)
         print("Checker started...")

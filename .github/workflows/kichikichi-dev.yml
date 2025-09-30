@@ -1,0 +1,38 @@
+name: Kichikichi Check - DEV
+
+on:
+  workflow_dispatch:  # manual trigger
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    environment: DEV
+    timeout-minutes: 1440   # 24h max
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: |
+          pip install requests playwright
+          playwright install --with-deps chromium
+
+      - name: Run Kichikichi checker
+        run: python -u kichikichi_check.py
+
+      - name: Upload Reservation Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: reservation-run-results-${{ github.run_id }}
+          path: |
+            html_snapshots/
+            success_screenshots/
+            ERROR_*.png
+            FAILED_*.png
+          retention-days: 7
