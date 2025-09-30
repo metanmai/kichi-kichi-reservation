@@ -206,7 +206,7 @@ def worker_book_slot(user, seating, reservation_num, total_reservations):
 
     with sync_playwright() as p:
         try:
-            browser = p.chromium.launch(headless=not TEST_MODE)
+            browser = p.chromium.launch(headless=False)
             page = browser.new_page()
 
             print(f"[{reservation_num}/{total_reservations}] Booking: {user['name']} | {slot} | {seating}")
