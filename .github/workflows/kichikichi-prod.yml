@@ -10,6 +10,9 @@ jobs:
     timeout-minutes: 1440   # 24h max
 
     steps:
+      - name: Print environment
+        run: env
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
