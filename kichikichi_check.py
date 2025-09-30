@@ -48,7 +48,7 @@ SLOT_MAPPING = {
 SEATINGS = ["Bar", "Table"]
 
 # Test mode
-TEST_MODE = False
+TEST_MODE = True
 TEST_HTML_FILE = "KichiKichi Reservation - ザ・洋食屋・キチキチ.html"
 TEST_STATE = "open"
 
