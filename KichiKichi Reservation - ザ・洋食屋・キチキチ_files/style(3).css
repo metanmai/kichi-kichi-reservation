@@ -1,0 +1,194 @@
+/* タブナビゲーションのスタイル */
+.nav-tab-wrapper {
+    margin-bottom: 20px;
+}
+
+.nav-tab {
+    display: inline-block;
+    padding: 10px 20px;
+    margin-right: 2px;
+    line-height: 1.5;
+    text-decoration: none;
+    color: #0073aa;
+    background: #f1f1f1;
+    border: 1px solid #ccc;
+    border-bottom: none;
+    cursor: pointer;
+}
+
+.nav-tab:hover,
+.nav-tab-active {
+    background: #fff;
+    border-color: #ccc;
+    color: #000;
+}
+
+.nav-tab-active {
+    background: #fff;
+    border-bottom: 1px solid #fff;
+}
+
+/* タブコンテンツのスタイル */
+.tab-content {
+    display: none;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ccc;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* 予約フォームのスタイル */
+#reservation-form {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+#reservation-form label {
+    display: block;
+    font-weight: bold;
+    margin: 2vh 0 0.5vh;
+}
+
+#reservation-form input,
+#reservation-form select {
+    width: 100%;
+    padding: 0.5em;
+    margin-bottom: 2vh;
+}
+
+#reservation-form button {
+    display: block;
+    width: 100%;
+    padding: 0.7em;
+    background-color: #cccccc;
+    color: white;
+    border: none;
+    cursor: not-allowed;
+}
+
+/* ボタンのスタイルをリセットして再定義 */
+#reservation-form button:enabled {
+    background-color: #ffff33 !important;
+    color: black !important;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#reservation-form button:enabled:hover {
+    background-color: #dbdb06 !important;
+}
+
+/* チェックボックスのスタイル */
+.checkbox-container {
+    display: block;
+    margin-bottom: 3vh;
+    width: 90%;
+    margin: 3vh auto;
+}
+
+.checkbox-container input[type="checkbox"] {
+    display: inline-block;
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+.checkbox-container label {
+    display: inline-block;
+    font-weight: bold;
+    color: red;
+    word-break: break-word;
+    white-space: pre-wrap;
+    vertical-align: middle;
+    width: calc(100% - 40px); /* チェックボックスのスペースを引いた幅に設定 */
+    margin-left: 5px;
+}
+
+#reservation-message {
+    text-align: left;
+    background-color: #FFF59D;
+    color: black;
+    font-weight: bold;
+    padding: 10px;
+    margin-bottom: 20px;
+    display: inline-block;
+    white-space: pre-wrap;
+    font-family: Arial, sans-serif;
+}
+.message-line {
+    display: flex;
+    justify-content: flex-start;
+}
+.message-line .label {
+    min-width: 20vw;
+}
+
+#reservation-modal {
+    position: fixed;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -30%);
+    background-color: #D31010;
+    padding: 3vh 4vw;
+    border: 2px solid black;
+    border-radius: 1rem; /* ← 丸みを追加 */
+    font-weight: bold;
+    z-index: 1000;
+    display: none;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3); /* ← 影で浮かせ感を */
+    max-width: 80vw;
+    text-align: center;
+}
+
+#reservation-modal:not(.hidden) {
+    display: block;
+}
+
+#reservation-modal.hidden {
+    display: none;
+}
+
+#reservation-modal-message {
+    color: white;
+    background-color: #D31010;
+    border: none;
+    padding: 1vh 0;
+    font-size: 1.1em;
+    line-height: 1.5;
+}
+
+#reservation-modal .modal-content {
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent; /* ← 不要な背景を消す */
+    box-shadow: none;        /* ← うっすらした影が出てたらここで消す */
+}
+
+#reservation-modal-message {
+    color: white;
+    background-color: #D31010;
+    border: none;
+    padding: 0;
+    margin: 0; /* ← 上下の余白を完全に排除 */
+}
+
+#close-reservation-modal {
+    color: #D31010;
+    background-color: #FFD700;
+    border: 2px solid black;
+    font-weight: bold;
+    padding: 0.6em 1.2em;
+    margin-top: 1vh;
+    border-radius: 0.5rem; /* ← ボタンも角丸 */
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+#close-reservation-modal:hover {
+    background-color: #FFC107; /* 少し濃くしてホバー感 */
+    transform: scale(1.05);
+}

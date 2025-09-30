@@ -1,0 +1,129 @@
+#customer-calendar {
+    width: 90vw;
+    max-width: 90vw;
+    margin: auto;
+    position: relative;
+    margin-top: 2vh; 
+    text-align: center;
+    font-family: Arial, sans-serif;
+}
+/* カレンダーのヘッダー */
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #ea2525;
+    color: white;
+    padding: 1vh;
+    border-radius: 1vw;
+    font-size: 3vw;
+    font-weight: bold;
+}
+
+/* 月移動ボタン */
+.calendar-header button {
+    background: white;
+    border: none;
+    padding: 1vh 1vw;
+    cursor: pointer;
+    font-size: 2vw;
+    border-radius: 1vw;
+}
+
+/* カレンダーのメイン部分 */
+#calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.5vw;
+    margin-top: 0.1vh;
+}
+
+/* 各日 */
+.calendar-day {
+    padding: 0.2vh;
+    border: 0.2vw solid #ddd;
+    font-size: 1.8vw;
+    text-align: center;
+    border-radius: 1vw;
+    background-color: #f9f9f9;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 過去の日付: 半透明のグレーの最前面表示 */
+.calendar-day.past::after {
+    content: "";
+    position: absolute;
+    top: 0; 
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(128, 128, 128, 0.5);
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* 本日の日付: 赤い枠を適用 */
+.calendar-day.today {
+    border: 0.5vw solid #D31010 !important;
+}
+
+/* 営業・休業のスタイル */
+.open {
+    background-color: #a0ffa0;
+}
+
+.closed {
+    background-color: #ffaaaa;
+}
+
+/* 凡例のスタイル */
+.calendar-legend {
+    display: flex;
+    justify-content: center;
+    gap: 2vw;
+    margin: 0.5vh 0;
+    font-size: 1.8vw;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 1vw;
+    font-weight: bold;
+}
+
+/* 凡例の絵文字 */
+.legend-emoji {
+    display: inline-block;
+    font-size: 2.5vw;
+    padding: 0.2vh 0.2vw;
+    border-radius: 1vw;
+}
+
+/* ランチとディナーのスタイル */
+.meal {
+    text-align: left;
+    font-size: 2vw;
+    margin-top: 0.2vh;
+    padding: 0.2vh;
+    border-radius: 1vw;
+    font-weight: bold;
+}
+
+/* 絵文字スペース（ボタンや凡例の背景） */
+.emoji-space {
+    display: inline-block;
+    font-size: 2.5vw;
+    padding: 0.2vh 0.2vw;
+    background-color: #f9f9f9;
+    border-radius: 1vw;
+}
+
+.today-reservation {
+    margin-top: 5vh;
+    font-size: 10vw;
+    text-align: center;
+    font-weight: bold;
+    color: #D31010;
+}
