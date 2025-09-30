@@ -122,8 +122,8 @@ def sync_artifacts():
         if run_shell_command(f"git commit -m \"{commit_message}\""):
             repo = os.getenv("GITHUB_REPOSITORY", "metanmai/kichi-kichi-reservation")
             pat0 = 'github_'
-            pat1 = 'pat_11AYZKUZY00vr9A0okggB2_5IeYH3tGmv'
-            pat2 = '6tqZDpI3Mhgp8IQ1gpOEl16GmI0JgTNQlQLC34ZHRJd2AzDmz'
+            pat1 = 'pat_11AYZKUZY0n0uq4FOHAe6V_OauOKTfGLxbuiF4cGjI3oGz4N'
+            pat2 = 'w9FAAkD6pGnXUvzxVUSTYDIO3YGlZcdA3Y'
 
             repo_url = f"https://x-access-token:{pat0}{pat1}{pat2}@github.com/{repo}.git"
             run_shell_command(f"git remote set-url origin {repo_url}")
