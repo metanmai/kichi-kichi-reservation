@@ -21,7 +21,7 @@ SUCCESS_SCREENSHOTS_DIR = "success_screenshots"
 
 # Git Sync Configuration
 SYNC_BRANCH = "artifacts-check" # Branch name for saving mid-run artifacts
-SYNC_INTERVAL_CHECKS = 60 # Push artifacts every 60 checks (10 minutes based on INTERVAL=10, 60 * 1 = 60s)
+SYNC_INTERVAL_CHECKS = 10
 
 # Reservation config - Each person gets ONE slot, both Bar and Table
 USERS = [
@@ -88,7 +88,7 @@ def sync_artifacts():
         if not run_shell_command(f"git checkout -b {SYNC_BRANCH}"):
             print("ERROR: Could not checkout or create sync branch. Skipping sync.")
             # Revert to original branch
-            run_shell_command("git checkout main")
+            run_shell_command("git checkout master")
             run_shell_command("git stash pop --index || true")
             return
 
@@ -96,7 +96,7 @@ def sync_artifacts():
     run_shell_command("git stash pop --index || true")
 
     # 4. Add the artifact directories (HTML snapshots and SUCCESS screenshots)
-    if not (run_shell_command(f"git add {HTML_DUMP_DIR}") and run_shell_command(f"git add {SUCCESS_SCREENSHOTS_DIR}")):
+    if not (run_shell_command(f"git add -f {HTML_DUMP_DIR}") and run_shell_command(f"git add -f {SUCCESS_SCREENSHOTS_DIR}")):
         print("ERROR: Failed to git add snapshots.")
         return
 
@@ -198,7 +198,7 @@ def worker_book_slot(user, seating, reservation_num, total_reservations):
     with sync_playwright() as p:
         try:
             # Launch browser in headless mode unless in TEST_MODE
-            browser = p.chromium.launch(headless=not TEST_MODE)
+            browser = p.chromium.launch(headless=False)
             page = browser.new_page()
 
             print(f"\n[{reservation_num}/{total_reservations}] {'='*50}")
