@@ -306,7 +306,7 @@ def main():
     check_count = 0
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(headless=False)
         page = browser.new_page()
         notify(None, startup=True)
         print("Checker started...")
