@@ -75,72 +75,50 @@ def run_shell_command(command):
     return True
 
 def sync_artifacts():
-    """Commits and pushes HTML snapshots and screenshots mid-run to the sync branch."""
+    """Commits and pushes HTML snapshots mid-run to the sync branch."""
     print(f"\n--- Attempting to sync artifacts to branch '{SYNC_BRANCH}' ---")
     
-    # Determine default branch dynamically
-    try:
-        result = subprocess.run(
-            "git remote show origin | grep 'HEAD branch' | cut -d' ' -f5",
-            shell=True, capture_output=True, text=True, check=True
-        )
-        default_branch = result.stdout.strip()
-        if not default_branch:
-            default_branch = "main"  # fallback
-        print(f"Default branch detected: {default_branch}")
-    except subprocess.CalledProcessError:
-        default_branch = "main"
-        print("Failed to detect default branch, falling back to 'main'.")
-
-    # 1. Stash any existing changes
+    # 1. Stash any existing changes (optional, but clean)
     run_shell_command("git stash push -u -m 'temporary-stash'")
-
+    
     # 2. Checkout the artifact sync branch
     if not run_shell_command(f"git checkout {SYNC_BRANCH}"):
-        # If branch doesn't exist, create it
+        # If checkout fails (branch doesn't exist), create it
         print(f"Branch {SYNC_BRANCH} not found. Creating it.")
         if not run_shell_command(f"git checkout -b {SYNC_BRANCH}"):
             print("ERROR: Could not checkout or create sync branch. Skipping sync.")
-            run_shell_command(f"git checkout {default_branch}")
+            # Revert to original branch
+            run_shell_command("git checkout master")
             run_shell_command("git stash pop --index || true")
             return
 
-    # 3. Restore stash
+    # 3. Restore the stash (only the files that were stashed)
     run_shell_command("git stash pop --index || true")
 
-    # 4. Add artifact directories (force add to bypass .gitignore)
-    def git_add_if_exists(path):
-        if os.path.exists(path) and any(os.scandir(path)):
-            return run_shell_command(f"git add -f {path}")
-        return True
-
-    if not (git_add_if_exists(HTML_DUMP_DIR) and git_add_if_exists(SUCCESS_SCREENSHOTS_DIR)):
-        print("WARNING: No artifacts found to add, continuing.")
+    # 4. Add the artifact directories (HTML snapshots and SUCCESS screenshots)
+    if not (run_shell_command(f"git add -f {HTML_DUMP_DIR}") and run_shell_command(f"git add -f {SUCCESS_SCREENSHOTS_DIR}")):
+        print("ERROR: Failed to git add snapshots.")
+        return
 
     # 5. Commit if there are changes
-    try:
-        result = subprocess.run("git diff --cached --exit-code --quiet", shell=True)
-        has_changes = result.returncode != 0
-    except Exception:
-        has_changes = False
-
-    if has_changes:
+    if run_shell_command("git diff --cached --exit-code --quiet"):
+        print("No new HTML snapshots to commit.")
+    else:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         commit_message = f"CI Sync: HTML snapshots up to {timestamp}"
         if run_shell_command(f"git commit -m \"{commit_message}\""):
             print("Commit successful.")
-            # 6. Push changes to repository (force, since multiple mid-run pushes may occur)
+            
+            # 6. Push changes to the repository
+            # Note: We use --force because the push will happen multiple times from the same job
             if run_shell_command(f"git push origin {SYNC_BRANCH} --force"):
                 print(f"Successfully pushed artifacts to {SYNC_BRANCH}")
             else:
                 print("ERROR: Failed to push artifacts.")
-    else:
-        print("No new artifacts to commit.")
-
-    # 7. Return to default branch
-    run_shell_command(f"git checkout {default_branch}")
+    
+    # 7. Return to the main branch
+    run_shell_command("git checkout master")
     print("--- Artifact sync complete ---")
-
 
 
 def get_state(page):
