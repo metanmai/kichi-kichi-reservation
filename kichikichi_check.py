@@ -173,13 +173,25 @@ def notify(state, msg=None, startup=False):
         print(f"Notification failed: {e}")
 
 
-def save_html_snapshot(state, html):
-    """Save the HTML content to a file."""
+def save_html_snapshot(state, html, page=None):
+    """Save HTML and, if page object is provided, a screenshot."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = os.path.join(HTML_DUMP_DIR, f"{state}_{timestamp}.html")
-    with open(filename, "w", encoding="utf-8") as f:
+    
+    # Save HTML
+    html_filename = os.path.join(HTML_DUMP_DIR, f"{state}_{timestamp}.html")
+    with open(html_filename, "w", encoding="utf-8") as f:
         f.write(html)
-    print(f"Saved HTML snapshot: {filename}")
+    print(f"Saved HTML snapshot: {html_filename}")
+    
+    # Save screenshot if page object is passed
+    if page:
+        screenshot_filename = os.path.join(HTML_DUMP_DIR, f"{state}_{timestamp}.png")
+        try:
+            page.screenshot(path=screenshot_filename, full_page=True)
+            print(f"Saved screenshot: {screenshot_filename}")
+        except Exception as e:
+            print(f"Failed to save screenshot: {e}")
+
 
 
 def worker_book_slot(user, seating, reservation_num, total_reservations):
@@ -400,7 +412,7 @@ def main():
 
                 if state != last_state:
                     print(f"State changed: {state}")
-                    save_html_snapshot(state, html)
+                    save_html_snapshot(state, html, page)
                     notify(state)
 
                     if state == "open":
