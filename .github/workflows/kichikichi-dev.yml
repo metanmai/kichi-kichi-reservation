@@ -5,6 +5,9 @@ on:
 
 jobs:
   run-script:
+    env:
+      TEST_MODE: True
+
     runs-on: ubuntu-latest
     environment: DEV
     timeout-minutes: 1440   # 24h max
@@ -12,7 +15,7 @@ jobs:
     steps:
       - name: Print environment
         run: env
-        
+
       - name: Checkout repository
         uses: actions/checkout@v4
 

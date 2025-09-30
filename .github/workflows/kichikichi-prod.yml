@@ -5,6 +5,9 @@ on:
 
 jobs:
   run-script:
+    env:
+      TEST_MODE: False
+
     runs-on: ubuntu-latest
     environment: PROD
     timeout-minutes: 1440   # 24h max
