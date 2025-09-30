@@ -20,14 +20,15 @@ SUCCESS_SCREENSHOTS_DIR = "success_screenshots" # New directory for successful b
 
 # Reservation config - Each person gets ONE slot, both Bar and Table
 USERS = [
-    {"name": "Tanmai Niranjan", "email": "metanmai@gmail.com", "slot": "17:00"},
-    {"name": "Ayush Gupta", "email": "ayush96.gupta@gmail.com", "slot": "18:00"},
-    {"name": "Vrishank Shishir", "email": "vrishankshishir@gmail.com", "slot": "19:00"},
-    {"name": "Tarush Shankar", "email": "tarush1515@gmail.com", "slot": "20:00"},
-    {"name": "Vijeth Jain", "email": "vijethjain@rocketmail.com", "slot": "17:00"},
+    {"name": "Asha Mehra",        "email": "asha.mehra@gmail.com",        "slot": "17:00"},
+    {"name": "Karan Iyer",        "email": "karan.iyer90@outlook.com",    "slot": "18:00"},
+    {"name": "Priya Natarajan",   "email": "priya.natarajan@mailinator.com","slot": "19:00"},
+    {"name": "Rohit Verma",       "email": "rohit.verma1988@yahoo.com",   "slot": "20:00"},
+    {"name": "Sana Kapoor",       "email": "sana.kapoor+test@gmail.com",   "slot": "17:00"},
 ]
 
-RES_PEOPLE = "5"
+
+RES_PEOPLE = "3"
 
 # Map seating times to actual slot IDs from the HTML
 SLOT_MAPPING = {
