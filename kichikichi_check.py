@@ -5,6 +5,7 @@ from datetime import datetime
 import threading 
 from playwright.sync_api import sync_playwright, TimeoutError
 import os
+import subprocess # New import for running shell commands
 
 # ===============================
 # Configuration
@@ -16,7 +17,11 @@ NTFY_TOPIC = "kichikichi-alert"
 NTFY_URL = f"https://ntfy.sh/{NTFY_TOPIC}"
 INTERVAL = 1  # seconds between checks
 HTML_DUMP_DIR = "html_snapshots"
-SUCCESS_SCREENSHOTS_DIR = "success_screenshots" # New directory for successful bookings
+SUCCESS_SCREENSHOTS_DIR = "success_screenshots" 
+
+# Git Sync Configuration
+SYNC_BRANCH = "artifacts-check" # Branch name for saving mid-run artifacts
+SYNC_INTERVAL_CHECKS = 60 # Push artifacts every 60 checks (10 minutes based on INTERVAL=10, 60 * 1 = 60s)
 
 # Reservation config - Each person gets ONE slot, both Bar and Table
 USERS = [
@@ -51,9 +56,71 @@ TEST_STATE = "open"
 os.makedirs(HTML_DUMP_DIR, exist_ok=True)
 os.makedirs(SUCCESS_SCREENSHOTS_DIR, exist_ok=True)
 
+# Global flag to track the browser instance for cleanup
+global_browser = None 
+
 # ===============================
 # Helpers
 # ===============================
+def run_shell_command(command):
+    """Execute a shell command and print output/errors."""
+    try:
+        result = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
+        # print(f"Command success: {result.stdout.strip()}") # Uncomment for detailed debug
+    except subprocess.CalledProcessError as e:
+        print(f"Shell command failed: {e.cmd}")
+        print(f"Stdout: {e.stdout.strip()}")
+        print(f"Stderr: {e.stderr.strip()}")
+        return False
+    return True
+
+def sync_artifacts():
+    """Commits and pushes HTML snapshots mid-run to the sync branch."""
+    print(f"\n--- Attempting to sync artifacts to branch '{SYNC_BRANCH}' ---")
+    
+    # 1. Stash any existing changes (optional, but clean)
+    run_shell_command("git stash push -u -m 'temporary-stash'")
+    
+    # 2. Checkout the artifact sync branch
+    if not run_shell_command(f"git checkout {SYNC_BRANCH}"):
+        # If checkout fails (branch doesn't exist), create it
+        print(f"Branch {SYNC_BRANCH} not found. Creating it.")
+        if not run_shell_command(f"git checkout -b {SYNC_BRANCH}"):
+            print("ERROR: Could not checkout or create sync branch. Skipping sync.")
+            # Revert to original branch
+            run_shell_command("git checkout main")
+            run_shell_command("git stash pop --index || true")
+            return
+
+    # 3. Restore the stash (only the files that were stashed)
+    run_shell_command("git stash pop --index || true")
+
+    # 4. Add the artifact directories (HTML snapshots and SUCCESS screenshots)
+    if not (run_shell_command(f"git add {HTML_DUMP_DIR}") and run_shell_command(f"git add {SUCCESS_SCREENSHOTS_DIR}")):
+        print("ERROR: Failed to git add snapshots.")
+        return
+
+    # 5. Commit if there are changes
+    if run_shell_command("git diff --cached --exit-code --quiet"):
+        print("No new HTML snapshots to commit.")
+    else:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        commit_message = f"CI Sync: HTML snapshots up to {timestamp}"
+        if run_shell_command(f"git commit -m \"{commit_message}\""):
+            print("Commit successful.")
+            
+            # 6. Push changes to the repository
+            # Note: We use --force because the push will happen multiple times from the same job
+            if run_shell_command(f"git push origin {SYNC_BRANCH} --force"):
+                print(f"Successfully pushed artifacts to {SYNC_BRANCH}")
+            else:
+                print("ERROR: Failed to push artifacts.")
+    
+    # 7. Return to the main branch
+    run_shell_command("git checkout main")
+    print("--- Artifact sync complete ---")
+
+
 def get_state(page):
     """
     Check the current reservation state.
@@ -66,6 +133,7 @@ def get_state(page):
         except FileNotFoundError:
             print(f"ERROR: Test HTML file '{TEST_HTML_FILE}' not found. Defaulting to 'before' state.")
             html = ""
+        # In TEST_MODE, always return the fixed TEST_STATE
         return TEST_STATE, html
 
     page.goto(URL, wait_until="load")
@@ -145,8 +213,6 @@ def worker_book_slot(user, seating, reservation_num, total_reservations):
                 page.goto(URL, wait_until="networkidle")
             page.wait_for_timeout(500)
 
-            # Select language and fill form... (Form filling code remains the same)
-            
             # Select language
             print("Selecting language: English")
             page.select_option("#language-select", "en")
@@ -317,6 +383,9 @@ def auto_book():
 def main():
     last_state = None
     
+    # Initialize check counter
+    check_count = 0 
+    
     with sync_playwright() as p:
         # Launch browser to check initial state (can be headless)
         browser = p.chromium.launch(headless=True)
@@ -344,10 +413,18 @@ def main():
                 else:
                     print(f"[{datetime.now().strftime('%H:%M:%S')}] Still {state}")
 
+                # --- Mid-Run Artifact Sync Logic ---
+                check_count += 1
+                # Push artifacts to Git every 60 checks (60 seconds, or 1 minute)
+                if check_count % SYNC_INTERVAL_CHECKS == 0: 
+                    sync_artifacts()
+
                 time.sleep(INTERVAL)
 
         finally:
-            if browser and not browser.is_closed():
+            # FIX: Replace 'is_closed()' with 'is_connected()' to resolve Playwright AttributeError.
+            # We close the browser if it exists and is still connected (meaning it wasn't closed before).
+            if browser and browser.is_connected():
                 browser.close()
 
 
@@ -355,4 +432,10 @@ if __name__ == "__main__":
     print("Starting KichiKichi checker + auto-booker...")
     if TEST_MODE:
         print(f"Running in TEST_MODE, using {TEST_HTML_FILE}. Success will be SIMULATED for every attempt.")
+    
+    # === CRITICAL SETUP FOR GIT SYNC ===
+    # Configure user credentials for git commit/push
+    run_shell_command("git config user.name 'github-actions[bot]'")
+    run_shell_command("git config user.email 'github-actions[bot]@users.noreply.github.com'")
+    
     main()
