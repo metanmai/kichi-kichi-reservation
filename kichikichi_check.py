@@ -43,7 +43,10 @@ SLOT_MAPPING = {
 
 SEATINGS = ["Bar", "Table"]
 
-TEST_MODE = True
+TEST_MODE = os.getenv("TEST_MODE", "false").lower() == "true"
+
+print(f"TEST_MODE: {TEST_MODE}")
+
 TEST_HTML_FILE = "KichiKichi Reservation - ザ・洋食屋・キチキチ.html"
 TEST_STATE = "open"
 
@@ -206,7 +209,7 @@ def worker_book_slot(user, seating, reservation_num, total_reservations):
 
     with sync_playwright() as p:
         try:
-            browser = p.chromium.launch(headless=not TEST_MODE)
+            browser = p.chromium.launch(headless=False)
             page = browser.new_page()
 
             print(f"[{reservation_num}/{total_reservations}] Booking: {user['name']} | {slot} | {seating}")
@@ -303,7 +306,7 @@ def main():
     check_count = 0
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(headless=False)
         page = browser.new_page()
         notify(None, startup=True)
         print("Checker started...")
