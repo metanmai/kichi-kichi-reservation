@@ -14,7 +14,7 @@ TEXT_BEFORE = "When the reservation time arrives, the reservation page will open
 TEXT_CLOSED = "We are currently fully booked. Reservations cannot be made at this time."
 NTFY_TOPIC = "kichikichi-alert"
 NTFY_URL = f"https://ntfy.sh/{NTFY_TOPIC}"
-INTERVAL = 1  # seconds between checks
+INTERVAL = 0.3  # seconds between checks
 HTML_DUMP_DIR = "html_snapshots"
 SUCCESS_SCREENSHOTS_DIR = "success_screenshots"
 
